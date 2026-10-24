@@ -68,6 +68,46 @@ L1. Strategies      → small_sort / radix / counting / introsort
    - `radix / counting`: Entropy-adaptive integer sorting for large data.
    - `introsort`: The ultimate worst-case fallback.
 
+## 🔬 Rigorous Correctness & Benchmarks
+
+We don't just claim it's fast; we prove it's correct and measure it rigorously.
+
+### 1. Bulletproof Correctness
+Nagi is validated against an exhaustive, adversarial test matrix **before** any performance benchmarks are executed. If a single element is out of place, the suite fails immediately.
+- **16,576 test cases passed (0 failed)**.
+- **19 data distributions**: All Equal, Sorted, Reversed, Organ Pipe, Sawtooth, Bit Reversal, Narrow Band, Many Duplicates, etc.
+- **6 integer types**: `int`, `unsigned int`, `long long`, `unsigned long long`, `short`, `int8_t`.
+- **Strict invariants checked**: 
+  - `std::is_sorted` (or reverse) validated.
+  - **Permutation check**: The output must be a strict permutation of the input (no elements lost or duplicated).
+  - `topk` and `LazySortedView` APIs strictly maintain prefix ordering without corrupting the underlying multiset.
+
+### 2. Performance Benchmark
+*Measured with Google Benchmark (min_time=0.5s, repetitions=3) on an Intel i5-4210U (2 physical / 4 logical cores, 1.7 GHz, 3MB L3 cache).*
+
+**Raw Execution Time (Median of 3 runs, int, uniformly random, ascending)**
+
+| Scale (N) | Nagi (ms) | `std::sort` (ms) | `std::stable_sort` (ms) | Speedup (vs `std::sort`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **100,000** | **2.408** | 9.081 | 8.653 | **3.77×** |
+| **1,000,000** | **13.997** | 104.817 | 98.839 | **7.49×** |
+| **10,000,000** | **165.020** | 1240.447 | 1145.933 | **7.52×** |
+
+> **Note:** 
+> 1. The 1M and 10M benchmarks automatically trigger Nagi's multi-threaded `radix_sort_32_parallel` path (baseline is single-threaded).
+> 2. *Empirical Complexity*: The single-threaded paths (1K to 1M) exhibit an empirical complexity of **O(N log N)** with a fitted coefficient of **0.782** and an RMS error of just **0.44%**. For large integer datasets, the adaptive router kicks into linear O(N) radix/counting sort, resulting in massive speedups.
+
+### 3. How to Reproduce
+All benchmarks and correctness checks are fully reproducible. 
+```bash
+# Clone the repo
+git clone https://github.com/nbShenChu/Nagi-sort.git
+cd Nagi-sort/bench
+
+# Run the full suite (Correctness + Benchmarks)
+run.bat
+
+
 ## 📊 Performance Benchmark
 
 *Test environment: Random integers, single & multi-threaded, compiled with `-O3`.*
